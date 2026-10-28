@@ -2,3 +2,5 @@ tensorflow==2.18.0
 streamlit
 numpy<2
 Pillow
+transformers
+torch

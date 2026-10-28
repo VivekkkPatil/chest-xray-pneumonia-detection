@@ -1,6 +1,11 @@
 
 # Core
-tensorflow
+
+tensorflow==2.15.1
+streamlit
+numpy<2
+Pillow
+
 streamlit
 numpy
 matplotlib

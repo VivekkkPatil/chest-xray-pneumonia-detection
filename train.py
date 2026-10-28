@@ -1,74 +1,42 @@
+
 import os
-import pandas as pd
-import numpy as np
 import tensorflow as tf
-from tensorflow.keras.applications import DenseNet121
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
-from tensorflow.keras.models import Model
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
+from tensorflow.keras import layers, models
 
-# =========================
-# 1. Load CSV
-# =========================
-df = pd.read_csv("data/Data_Entry_2017.csv")
+os.makedirs("models", exist_ok=True)
 
-# 14 Disease Labels
-labels = [
-    "Atelectasis", "Cardiomegaly", "Effusion", "Infiltration",
-    "Mass", "Nodule", "Pneumonia", "Pneumothorax",
-    "Consolidation", "Edema", "Emphysema",
-    "Fibrosis", "Pleural_Thickening", "Hernia"
-]
-
-# Convert multi-label string into binary columns
-for label in labels:
-    df[label] = df["Finding Labels"].apply(lambda x: 1 if label in x else 0)
-
-# Keep only required columns
-df = df[["Image Index"] + labels]
-
-# =========================
-# 2. Image Data Generator
-# =========================
-datagen = ImageDataGenerator(
-    rescale=1./255,
-    validation_split=0.2
+# Load dataset
+train = tf.keras.utils.image_dataset_from_directory(
+    "data/chest_xray/train",
+    image_size=(128, 128),
+    batch_size=32,
+    label_mode="binary",
+    class_names=["NORMAL", "PNEUMONIA"]
 )
 
-train_generator = datagen.flow_from_dataframe(
-    dataframe=df,
-    directory="data/images",
-    x_col="Image Index",
-    y_col=labels,
-    target_size=(224, 224),
-    batch_size=16,
-    class_mode="raw",
-    subset="training"
+val = tf.keras.utils.image_dataset_from_directory(
+    "data/chest_xray/val",
+    image_size=(128, 128),
+    batch_size=32,
+    label_mode="binary",
+    class_names=["NORMAL", "PNEUMONIA"]
 )
 
-val_generator = datagen.flow_from_dataframe(
-    dataframe=df,
-    directory="data/images",
-    x_col="Image Index",
-    y_col=labels,
-    target_size=(224, 224),
-    batch_size=16,
-    class_mode="raw",
-    subset="validation"
-)
+# Simple CNN model
+model = models.Sequential([
+    layers.Input(shape=(128, 128, 3)),
+    layers.Rescaling(1./255),
 
-# =========================
-# 3. Build Model
-# =========================
-base_model = DenseNet121(weights="imagenet", include_top=False, input_shape=(224, 224, 3))
-base_model.trainable = False
+    layers.Conv2D(16, 3, activation="relu"),
+    layers.MaxPooling2D(),
 
+    layers.Conv2D(32, 3, activation="relu"),
+    layers.MaxPooling2D(),
 
-x = GlobalAveragePooling2D()(base_model.output)
-output = Dense(14, activation="sigmoid")(x)
-
-model = Model(inputs=base_model.input, outputs=output)
+    layers.Flatten(),
+    layers.Dense(64, activation="relu"),
+    layers.Dense(1, activation="sigmoid")
+])
 
 model.compile(
     optimizer="adam",
@@ -76,31 +44,12 @@ model.compile(
     metrics=["accuracy"]
 )
 
-model.summary()
-
-# =========================
-# 4. Callbacks
-# =========================
-checkpoint = ModelCheckpoint(
-    "models/best_model.h5",
-    monitor="val_loss",
-    save_best_only=True
+model.fit(
+    train,
+    validation_data=val,
+    epochs=3
 )
 
-early_stop = EarlyStopping(
-    monitor="val_loss",
-    patience=5,
-    restore_best_weights=True
-)
+model.save("models/simple_model.keras")
 
-# =========================
-# 5. Train Model
-# =========================
-history = model.fit(
-    train_generator,
-    validation_data=val_generator,
-    epochs=5,
-    callbacks=[checkpoint, early_stop]
-)
-
-print("Training Complete ✅")
+print("Training completed!")

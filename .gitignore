@@ -26,3 +26,21 @@ data/
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Dataset
+data/
+
+# Trained models
+models/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Environment files
+.env
+
+# Jupyter
+.ipynb_checkpoints/

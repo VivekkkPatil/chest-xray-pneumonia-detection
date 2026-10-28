@@ -1,15 +1,5 @@
 
-# Core
-
 tensorflow==2.15.1
 streamlit
 numpy<2
 Pillow
-
-streamlit
-numpy
-matplotlib
-opencv-python
-Pillow
-h5py
-
